@@ -1,0 +1,62 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/abulhanifah/weather-monitoring/internal/config"
+	"github.com/abulhanifah/weather-monitoring/internal/db"
+	"github.com/abulhanifah/weather-monitoring/internal/router"
+)
+
+func main() {
+	withSeed := flag.Bool("with-seed", false, "jalankan seeder sebelum server start")
+	flag.Parse()
+
+	// Load config from env
+	cfg := config.Load()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	database := db.InitPostgres(cfg)
+
+	if *withSeed {
+		if err := db.Seed(database); err != nil {
+			log.Fatalf("Seeding gagal: %v", err)
+		}
+	}
+
+	r := router.New(cfg, database)
+	srv := &http.Server{
+		Addr:    ":" + cfg.AppPort,
+		Handler: r,
+	}
+
+	go func() {
+		log.Printf("REST Server berjalan di http://localhost:%s", cfg.AppPort)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+	}()
+
+	// Graceful Shutdown
+	<-ctx.Done()
+	log.Println("Mematikan service...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Service selesai dihentikan.")
+}
