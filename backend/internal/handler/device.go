@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/abulhanifah/weather-monitoring/internal/models"
 	"github.com/abulhanifah/weather-monitoring/internal/services"
 	"github.com/abulhanifah/weather-monitoring/pkg"
+	"gorm.io/gorm"
 )
 
 type DeviceHandler struct {
@@ -59,9 +61,67 @@ func (h *DeviceHandler) CreateDevice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// UpdateDevice handler untuk PATCH /api/v1/devices/{id}.
+// Body: subset dari {name, description, status, location_id}.
+func (h *DeviceHandler) UpdateDevice(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+
+	var data map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": "Invalid payload",
+		})
+		return
+	}
+
+	res, err := h.svc.UpdateDevice(ctx, id, data)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+			return
+		}
+		pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Device updated successfully",
+		"data":    res,
+	})
+}
+
+// DeleteDevice handler untuk DELETE /api/v1/devices/{id}.
+func (h *DeviceHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	if err := h.svc.DeleteDevice(r.Context(), id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+			return
+		}
+		pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Device deleted successfully",
+	})
+}
+
 // ListDevices handler untuk GET /api/v1/devices.
 // Query params: page (default 1), limit (default 10),
-// sort (contoh "created_at desc"), filter: status, name, id.
+// sort (kolom devices, atau "location asc|desc" untuk sort nama lokasi),
+// filter: status, name, id, location_id,
+// q (search ILIKE di device name, location name, device id).
 func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
@@ -89,6 +149,12 @@ func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	}
 	if v := q.Get("id"); v != "" {
 		filter["id"] = v
+	}
+	if v := q.Get("location_id"); v != "" {
+		filter["location_id"] = v
+	}
+	if v := q.Get("q"); v != "" {
+		filter["q"] = v
 	}
 
 	params := map[string]any{

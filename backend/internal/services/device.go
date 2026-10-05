@@ -44,6 +44,77 @@ func (s *DeviceService) SetStatus(ctx context.Context, id string, status string)
 	return s.repo.Update(ctx, id, map[string]any{"status": status})
 }
 
+// UpdateDevice partial update device. Keys yang diizinkan:
+// name, description, status, location_id (null untuk melepas lokasi).
+func (s *DeviceService) UpdateDevice(ctx context.Context, id string, data map[string]any) (*models.Device, error) {
+	if id == "" {
+		return nil, errors.New("device id is required")
+	}
+	if len(data) == 0 {
+		return nil, errors.New("no fields to update")
+	}
+
+	allowedStatus := []string{
+		constants.StatusActive,
+		constants.StatusOffline,
+		constants.StatusDegraded,
+		constants.StatusMaintenance,
+		constants.StatusFaulty,
+		constants.StatusDisabled,
+	}
+
+	patch := map[string]any{}
+	for key, val := range data {
+		switch key {
+		case "name", "description":
+			s, ok := val.(string)
+			if !ok {
+				return nil, fmt.Errorf("field %s must be a string", key)
+			}
+			patch[key] = s
+		case "status":
+			status, ok := val.(string)
+			if !ok || !pkg.Contains(allowedStatus, status) {
+				return nil, fmt.Errorf("invalid status, allowed: %v", allowedStatus)
+			}
+			patch[key] = status
+		case "location_id":
+			if val == nil {
+				patch[key] = nil
+				continue
+			}
+			locID, ok := pkg.ToUintFilter(val)
+			if !ok {
+				return nil, errors.New("invalid location_id")
+			}
+			patch[key] = locID
+		default:
+			return nil, fmt.Errorf("field %s cannot be updated", key)
+		}
+	}
+
+	if len(patch) == 0 {
+		return nil, errors.New("no fields to update")
+	}
+
+	if _, err := s.repo.FindByID(ctx, id); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Update(ctx, id, patch); err != nil {
+		return nil, err
+	}
+
+	return s.repo.FindByID(ctx, id)
+}
+
+func (s *DeviceService) DeleteDevice(ctx context.Context, id string) error {
+	if id == "" {
+		return errors.New("device id is required")
+	}
+	return s.repo.Delete(ctx, id)
+}
+
 func (s *DeviceService) CreateDevice(ctx context.Context, dev *models.Device) (*models.CreateDeviceResponse, error) {
 	// cek apakah device id sudah ada
 	exist, err := s.repo.FindByID(ctx, dev.ID)

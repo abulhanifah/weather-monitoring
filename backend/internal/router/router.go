@@ -24,6 +24,10 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	deviceSvc := services.NewService(cfg, deviceRepo)
 	deviceHandler := handler.NewHandler(deviceSvc)
 
+	locationRepo := repositories.NewLocationRepository(database)
+	locationSvc := services.NewLocationService(locationRepo)
+	locationHandler := handler.NewLocationHandler(locationSvc)
+
 	// ----------------------------------------------------
 	// 1. PUBLIC ROUTES (Tanpa Auth)
 	// ----------------------------------------------------
@@ -35,6 +39,13 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	// ----------------------------------------------------
 	jwtAuth := middleware.JWTAuthMiddleware(cfg.AuthSecret)
 	mux.Handle("GET /api/v1/devices", jwtAuth(http.HandlerFunc(deviceHandler.ListDevices)))
+	mux.Handle("POST /api/v1/devices", jwtAuth(http.HandlerFunc(deviceHandler.CreateDevice)))
+	mux.Handle("GET /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.GetDevice)))
+	mux.Handle("PATCH /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.UpdateDevice)))
+	mux.Handle("DELETE /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.DeleteDevice)))
+	mux.Handle("GET /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.ListLocations)))
+	mux.Handle("GET /api/v1/locations/{id}", jwtAuth(http.HandlerFunc(locationHandler.GetLocation)))
+	mux.Handle("POST /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.CreateLocation)))
 
 	// ----------------------------------------------------
 	// 3. API KEY ROUTES (Membutuhkan Auth API Key) - Ingest Device

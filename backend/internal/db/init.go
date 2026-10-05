@@ -38,5 +38,6 @@ func Migrate(database *gorm.DB) error {
 		&models.Device{},
 		&models.APIKeyMeta{},
 		&models.User{},
+		&models.Location{},
 	)
 }

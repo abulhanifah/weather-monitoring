@@ -8,6 +8,8 @@ type Device struct {
 	Name        string    `gorm:"type:varchar(100);not null" json:"name"`
 	Description string    `gorm:"type:text" json:"description"`
 	Status      string    `gorm:"type:varchar(20);default:'active'" json:"status"`
+	LocationID  *uint     `gorm:"index" json:"location_id"`
+	Location    *Location `gorm:"foreignKey:LocationID" json:"location,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
