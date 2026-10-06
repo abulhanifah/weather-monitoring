@@ -45,10 +45,13 @@ type LocationInput struct {
 }
 
 // DevicePatch body PATCH device untuk dokumentasi swagger.
-// location_id null untuk melepas lokasi.
+// location_id/longitude/latitude/altitude null untuk mengosongkan.
 type DevicePatch struct {
-	Name        *string `json:"name,omitempty" example:"Stasiun Bogor"`
-	Description *string `json:"description,omitempty" example:"Stasiun pemantau cuaca Bogor"`
-	Status      *string `json:"status,omitempty" example:"active"`
-	LocationID  *uint   `json:"location_id,omitempty" example:"4"`
+	Name        *string  `json:"name,omitempty" example:"Stasiun Bogor"`
+	Description *string  `json:"description,omitempty" example:"Stasiun pemantau cuaca Bogor"`
+	Status      *string  `json:"status,omitempty" example:"active"`
+	LocationID  *uint    `json:"location_id,omitempty" example:"4"`
+	Longitude   *float64 `json:"longitude,omitempty" example:"106.8"`
+	Latitude    *float64 `json:"latitude,omitempty" example:"-6.2"`
+	Altitude    *float64 `json:"altitude,omitempty" example:"45"`
 }

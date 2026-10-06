@@ -4,17 +4,19 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 )
 
 // User untuk kebutuhan auth JWT
 type User struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Email     string    `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
-	Name      string    `gorm:"type:varchar(50);not null" json:"name"`
-	Password  string    `gorm:"type:varchar(255);not null" json:"-"`
-	Role      string    `gorm:"type:varchar(50);not null" json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Email     string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
+	Name      string         `gorm:"type:varchar(50);not null" json:"name"`
+	Password  string         `gorm:"type:varchar(255);not null" json:"-"`
+	Role      string         `gorm:"type:varchar(50);not null" json:"role"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // Claims payload JWT, konsisten dengan middleware (claims["email"])

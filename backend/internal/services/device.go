@@ -36,16 +36,9 @@ func (s *DeviceService) GetPaginated(ctx context.Context, params map[string]any)
 	return s.repo.GetPaginated(ctx, params)
 }
 
-func (s *DeviceService) SetStatus(ctx context.Context, id string, status string) error {
-	// hanya boleh set status Active, Maintenance, atau Disabled dari admin
-	if !pkg.Contains([]string{constants.StatusActive, constants.StatusMaintenance, constants.StatusDisabled}, status) {
-		return errors.New("Invalid device status. You only can set status Active, Maintenance, atau Disabled")
-	}
-	return s.repo.Update(ctx, id, map[string]any{"status": status})
-}
-
 // UpdateDevice partial update device. Keys yang diizinkan:
-// name, description, status, location_id (null untuk melepas lokasi).
+// name, description, status, location_id,
+// longitude, latitude, altitude (null untuk mengosongkan).
 func (s *DeviceService) UpdateDevice(ctx context.Context, id string, data map[string]any) (*models.Device, error) {
 	if id == "" {
 		return nil, errors.New("device id is required")
@@ -55,12 +48,9 @@ func (s *DeviceService) UpdateDevice(ctx context.Context, id string, data map[st
 	}
 
 	allowedStatus := []string{
-		constants.StatusActive,
-		constants.StatusOffline,
-		constants.StatusDegraded,
+		constants.StatusInstalled,
 		constants.StatusMaintenance,
-		constants.StatusFaulty,
-		constants.StatusDisabled,
+		constants.StatusDecomissioned,
 	}
 
 	patch := map[string]any{}
@@ -88,6 +78,16 @@ func (s *DeviceService) UpdateDevice(ctx context.Context, id string, data map[st
 				return nil, errors.New("invalid location_id")
 			}
 			patch[key] = locID
+		case "longitude", "latitude", "altitude":
+			if val == nil {
+				patch[key] = nil
+				continue
+			}
+			f, ok := val.(float64)
+			if !ok {
+				return nil, fmt.Errorf("field %s must be a number", key)
+			}
+			patch[key] = f
 		default:
 			return nil, fmt.Errorf("field %s cannot be updated", key)
 		}

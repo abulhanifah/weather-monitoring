@@ -627,6 +627,10 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
                 "device_id": {
                     "type": "string"
                 },
@@ -662,8 +666,15 @@ const docTemplate = `{
         "models.Device": {
             "type": "object",
             "properties": {
+                "altitude": {
+                    "type": "number"
+                },
                 "created_at": {
                     "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "format": "date-time"
                 },
                 "description": {
                     "type": "string"
@@ -671,11 +682,17 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "latitude": {
+                    "type": "number"
+                },
                 "location": {
                     "$ref": "#/definitions/models.Location"
                 },
                 "location_id": {
                     "type": "integer"
+                },
+                "longitude": {
+                    "type": "number"
                 },
                 "name": {
                     "type": "string"
@@ -738,13 +755,25 @@ const docTemplate = `{
         "models.DevicePatch": {
             "type": "object",
             "properties": {
+                "altitude": {
+                    "type": "number",
+                    "example": 45
+                },
                 "description": {
                     "type": "string",
                     "example": "Stasiun pemantau cuaca Bogor"
                 },
+                "latitude": {
+                    "type": "number",
+                    "example": -6.2
+                },
                 "location_id": {
                     "type": "integer",
                     "example": 4
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 106.8
                 },
                 "name": {
                     "type": "string",
@@ -791,6 +820,10 @@ const docTemplate = `{
             "properties": {
                 "created_at": {
                     "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "format": "date-time"
                 },
                 "id": {
                     "type": "integer"

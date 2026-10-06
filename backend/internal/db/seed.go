@@ -78,7 +78,7 @@ func Seed(database *gorm.DB) error {
 				ID:          "DEV-003",
 				Name:        "Device 2 - Stasiun Bekasi",
 				Description: "Stasiun pemantau cuaca Bekasi",
-				Status:      constants.StatusOffline,
+				Status:      constants.StatusDisconnected,
 			},
 			Location: "Bekasi",
 		},

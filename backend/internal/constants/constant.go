@@ -2,12 +2,12 @@ package constants
 
 // Status Device Constants
 const (
-	StatusActive      = "active"
-	StatusOffline     = "offline"
-	StatusDegraded    = "degraded"
-	StatusMaintenance = "maintenance"
-	StatusFaulty      = "faulty"
-	StatusDisabled    = "disabled"
+	StatusInstalled     = "installed"
+	StatusActive        = "active"
+	StatusDisconnected  = "disconnected"
+	StatusMaintenance   = "maintenance"
+	StatusSensorError   = "error"
+	StatusDecomissioned = "decomissioned"
 )
 
 // Error Codes
