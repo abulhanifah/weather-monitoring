@@ -40,7 +40,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	sensorHandler := handler.NewSensorHandler(sensorSvc)
 
 	sensorInstallRepo := repositories.NewSensorInstallationRepository(database)
-	sensorInstallSvc := services.NewSensorInstallationService(sensorInstallRepo, deviceRepo, sensorRepo)
+	sensorInstallSvc := services.NewSensorInstallationService(sensorInstallRepo, deviceRepo, sensorRepo, repositories.NewSensorReadingRepository(database))
 	sensorInstallHandler := handler.NewSensorInstallationHandler(sensorInstallSvc)
 
 	// ----------------------------------------------------
@@ -83,6 +83,8 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	// ----------------------------------------------------
 	apiKeyAuth := middleware.APIKeyAuthMiddleware(deviceRepo, cfg.PrefixAPIKey)
 	mux.Handle("POST /api/v1/ingest/heartbeat", apiKeyAuth(http.HandlerFunc(deviceHandler.Heartbeat)))
+	mux.Handle("POST /api/v1/ingest/telemetry", apiKeyAuth(http.HandlerFunc(sensorInstallHandler.Telemetry)))
+	mux.Handle("POST /api/v1/ingest/telemetry/batch", apiKeyAuth(http.HandlerFunc(sensorInstallHandler.TelemetryBatch)))
 
 	return mux
 }

@@ -109,6 +109,46 @@ type SensorInstallationEnvelope struct {
 	Data    SensorInstallation `json:"data"`
 }
 
+// TelemetryReading satu baris readings telemetry (s = nama tipe, v = value).
+type TelemetryReading struct {
+	S string  `json:"s" example:"temp_air"`
+	V float64 `json:"v" example:"27.4"`
+}
+
+// TelemetryBatchItem satu entri batch telemetry.
+type TelemetryBatchItem struct {
+	Ts        int64              `json:"ts" example:"1757308800"`
+	Seq       *int64             `json:"seq,omitempty" example:"10432"`
+	BatteryV  *float64           `json:"battery_v,omitempty" example:"3.92"`
+	Rssi      *int               `json:"rssi,omitempty" example:"-71"`
+	Readings  []TelemetryReading `json:"readings"`
+}
+
+// TelemetryBatchRequest payload ingest telemetry batch untuk dokumentasi swagger.
+type TelemetryBatchRequest struct {
+	DeviceID string               `json:"device_id" example:"WS-GRT-001"`
+	Fw       *string              `json:"fw,omitempty" example:"1.4.2"`
+	Batch    []TelemetryBatchItem `json:"batch"`
+}
+
+// TelemetryRequest payload ingest telemetry untuk dokumentasi swagger.
+type TelemetryRequest struct {
+	DeviceID  string             `json:"device_id" example:"WS-GRT-001"`
+	Fw        *string            `json:"fw,omitempty" example:"1.4.2"`
+	Ts        int64              `json:"ts" example:"1757308800"`
+	Seq       *int64             `json:"seq,omitempty" example:"10432"`
+	BatteryV  *float64           `json:"battery_v,omitempty" example:"3.92"`
+	Rssi      *int               `json:"rssi,omitempty" example:"-71"`
+	Readings  []TelemetryReading `json:"readings"`
+}
+
+// TelemetryResponse response ingest telemetry.
+type TelemetryResponse struct {
+	Message string `json:"message" example:"OK"`
+	Saved   int    `json:"saved" example:"7"`
+	Skipped int    `json:"skipped" example:"0"`
+}
+
 // SensorTypeEnvelope response untuk dokumentasi swagger (bentuk aktual: {message, data}).
 type SensorTypeEnvelope struct {
 	Message string     `json:"message" example:"Sensor type created successfully"`

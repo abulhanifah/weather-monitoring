@@ -34,7 +34,7 @@ func InitPostgres(cfg *config.Config) *gorm.DB {
 // Migrate menjalankan auto migration untuk semua model domain.
 // Dipakai oleh service utama (via InitPostgres) dan migrator/seed.
 func Migrate(database *gorm.DB) error {
-	return database.AutoMigrate(
+	if err := database.AutoMigrate(
 		&models.Device{},
 		&models.APIKeyMeta{},
 		&models.User{},
@@ -44,5 +44,26 @@ func Migrate(database *gorm.DB) error {
 		&models.SensorInstallation{},
 		&models.SensorCalibration{},
 		&models.DeviceStatusHistory{},
-	)
+		&models.SensorReading{},
+	); err != nil {
+		return err
+	}
+
+	enableTimescaleHypertable(database)
+	return nil
+}
+
+// enableTimescaleHypertable ubah sensor_readings menjadi hypertable.
+// Non-fatal: bila ekstensi TimescaleDB tidak tersedia, tabel tetap
+// dipakai sebagai tabel biasa agar service tetap jalan.
+func enableTimescaleHypertable(database *gorm.DB) {
+	if err := database.Exec("CREATE EXTENSION IF NOT EXISTS timescaledb").Error; err != nil {
+		log.Printf("TimescaleDB tidak tersedia, sensor_readings dipakai sebagai tabel biasa: %v", err)
+		return
+	}
+	if err := database.Exec("SELECT create_hypertable('sensor_readings', 'reading_time_origin', if_not_exists => TRUE)").Error; err != nil {
+		log.Printf("Gagal membuat hypertable sensor_readings, dipakai sebagai tabel biasa: %v", err)
+		return
+	}
+	log.Println("Hypertable sensor_readings aktif")
 }

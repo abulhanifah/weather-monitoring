@@ -49,6 +49,35 @@ func (r *SensorInstallationRepository) Create(ctx context.Context, inst *models.
 	return nil
 }
 
+// FindActiveSensorIDsByTypeNames ambil sensor aktif milik device
+// untuk daftar nama tipe sekaligus. Return map[namaTipe]sensorID.
+func (r *SensorInstallationRepository) FindActiveSensorIDsByTypeNames(ctx context.Context, deviceID string, typeNames []string) (map[string]uint, error) {
+	out := map[string]uint{}
+	if len(typeNames) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		SensorID uint
+		TypeName string
+	}
+	err := r.db.WithContext(ctx).Model(&models.SensorInstallation{}).
+		Select("sensor_installations.sensor_id AS sensor_id, sensor_types.name AS type_name").
+		Joins("JOIN sensors ON sensors.id = sensor_installations.sensor_id AND sensors.deleted_at IS NULL").
+		Joins("JOIN sensor_types ON sensor_types.id = sensors.sensor_type_id AND sensor_types.deleted_at IS NULL").
+		Where("sensor_installations.device_id = ?", deviceID).
+		Where("sensor_installations.status = ?", true).
+		Where("sensor_types.name IN ?", typeNames).
+		Scan(&rows).Error
+	if err != nil {
+		slog.ErrorContext(ctx, "Error FindActiveSensorIDs", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.TypeName] = row.SensorID
+	}
+	return out, nil
+}
+
 // DeactivateByDeviceSensor ubah status instalasi aktif device+sensor menjadi false.
 // Return ErrRecordNotFound bila tidak ada instalasi aktif yang cocok.
 func (r *SensorInstallationRepository) DeactivateByDeviceSensor(ctx context.Context, deviceID string, sensorID uint) error {

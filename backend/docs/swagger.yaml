@@ -766,6 +766,84 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/models.ErrorEnvelope'
+  /api/v1/ingest/telemetry/batch:
+    post:
+      security:
+      - ApiKeyAuth: []
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - Ingest
+      summary: Ingest telemetry batch
+      parameters:
+      - description: Payload telemetry batch
+        name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.TelemetryBatchRequest'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TelemetryResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+  /api/v1/ingest/telemetry:
+    post:
+      security:
+      - ApiKeyAuth: []
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - Ingest
+      summary: Ingest telemetry device
+      parameters:
+      - description: Payload telemetry
+        name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.TelemetryRequest'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TelemetryResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
   /api/v1/locations:
     get:
       security:
@@ -1384,6 +1462,84 @@ definitions:
         type: string
       updated_at:
         type: string
+  models.TelemetryBatchItem:
+    type: object
+    properties:
+      battery_v:
+        type: number
+        example: 3.92
+      readings:
+        type: array
+        items:
+          $ref: '#/definitions/models.TelemetryReading'
+      rssi:
+        type: integer
+        example: -71
+      seq:
+        type: integer
+        example: 10432
+      ts:
+        type: integer
+        example: 1757308800
+  models.TelemetryBatchRequest:
+    type: object
+    properties:
+      batch:
+        type: array
+        items:
+          $ref: '#/definitions/models.TelemetryBatchItem'
+      device_id:
+        type: string
+        example: WS-GRT-001
+      fw:
+        type: string
+        example: 1.4.2
+  models.TelemetryReading:
+    type: object
+    properties:
+      s:
+        type: string
+        example: temp_air
+      v:
+        type: number
+        example: 27.4
+  models.TelemetryRequest:
+    type: object
+    properties:
+      battery_v:
+        type: number
+        example: 3.92
+      device_id:
+        type: string
+        example: WS-GRT-001
+      fw:
+        type: string
+        example: 1.4.2
+      readings:
+        type: array
+        items:
+          $ref: '#/definitions/models.TelemetryReading'
+      rssi:
+        type: integer
+        example: -71
+      seq:
+        type: integer
+        example: 10432
+      ts:
+        type: integer
+        example: 1757308800
+  models.TelemetryResponse:
+    type: object
+    properties:
+      message:
+        type: string
+        example: OK
+      saved:
+        type: integer
+        example: 7
+      skipped:
+        type: integer
+        example: 0
   models.SensorTypeEnvelope:
     type: object
     properties:
