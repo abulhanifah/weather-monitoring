@@ -618,6 +618,74 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/ingest/heartbeat": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ingest"
+                ],
+                "summary": "Device heartbeat",
+                "parameters": [
+                    {
+                        "description": "Payload telemetri (device_id dan ts wajib, field lain bebas)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HeartbeatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.MessageEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -684,6 +752,9 @@ const docTemplate = `{
                 },
                 "latitude": {
                     "type": "number"
+                },
+                "latest_health": {
+                    "type": "object"
                 },
                 "location": {
                     "$ref": "#/definitions/models.Location"
@@ -806,6 +877,19 @@ const docTemplate = `{
                 }
             }
         },
+        "models.HeartbeatRequest": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "WS-GRT-001"
+                },
+                "ts": {
+                    "type": "integer",
+                    "example": 1757308920
+                }
+            }
+        },
         "models.HealthEnvelope": {
             "type": "object",
             "properties": {
@@ -922,6 +1006,11 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        },
         "BearerAuth": {
             "type": "apiKey",
             "name": "Authorization",

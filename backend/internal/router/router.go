@@ -55,6 +55,8 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	// ----------------------------------------------------
 	// 3. API KEY ROUTES (Membutuhkan Auth API Key) - Ingest Device
 	// ----------------------------------------------------
+	apiKeyAuth := middleware.APIKeyAuthMiddleware(deviceRepo, cfg.PrefixAPIKey)
+	mux.Handle("POST /api/v1/ingest/heartbeat", apiKeyAuth(http.HandlerFunc(deviceHandler.Heartbeat)))
 
 	return mux
 }

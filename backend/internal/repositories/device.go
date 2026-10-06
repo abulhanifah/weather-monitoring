@@ -3,8 +3,10 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/abulhanifah/weather-monitoring/internal/models"
 	"github.com/abulhanifah/weather-monitoring/pkg"
@@ -30,8 +32,10 @@ func (r *DeviceRepository) FindByID(ctx context.Context, id string) (*models.Dev
 }
 
 func (r *DeviceRepository) Update(ctx context.Context, id string, data map[string]any) error {
-	if err := r.db.Model(models.Device{}).Updates(data).Where("id", id).Error; err != nil {
-		slog.ErrorContext(ctx, "Error SetStatus", slog.Any("id", id), slog.Any("data", data), slog.Any("error", err.Error()))
+	// Updates adalah finisher: dieksekusi saat dipanggil, jadi Where
+	// harus dipasang SEBELUM Updates agar masuk ke klausa WHERE.
+	if err := r.db.WithContext(ctx).Model(&models.Device{}).Where("id = ?", id).Updates(data).Error; err != nil {
+		slog.ErrorContext(ctx, "Error Update", slog.Any("id", id), slog.Any("data", data), slog.Any("error", err.Error()))
 		return err
 	}
 	return nil
@@ -79,6 +83,30 @@ func (r *DeviceRepository) RevokeAPIKeysByDeviceID(ctx context.Context, deviceID
 		return err
 	}
 	return nil
+}
+
+// FindAPIKeyByHash cari api key aktif berdasar hash.
+func (r *DeviceRepository) FindAPIKeyByHash(ctx context.Context, hash string) (*models.APIKeyMeta, error) {
+	var meta models.APIKeyMeta
+	if err := r.db.WithContext(ctx).First(&meta, "hash = ? AND is_revoked = ?", hash, false).Error; err != nil {
+		return nil, err
+	}
+	return &meta, nil
+}
+
+// CreateStatusHistory catat status device. ID = device_id + timeseries (unix nano).
+func (r *DeviceRepository) CreateStatusHistory(ctx context.Context, deviceID, status string) (*models.DeviceStatusHistory, error) {
+	hist := &models.DeviceStatusHistory{
+		ID:        fmt.Sprintf("%s-%d", deviceID, time.Now().UnixNano()),
+		DeviceID:  deviceID,
+		Status:    status,
+		CreatedAt: time.Now(),
+	}
+	if err := r.db.WithContext(ctx).Create(hist).Error; err != nil {
+		slog.ErrorContext(ctx, "Error CreateStatusHistory", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	return hist, nil
 }
 
 // GetPaginated ambil daftar device dengan filter, page, limit, sort dari params.

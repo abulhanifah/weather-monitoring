@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/abulhanifah/weather-monitoring/internal/config"
@@ -14,6 +16,7 @@ import (
 	"github.com/abulhanifah/weather-monitoring/internal/models"
 	"github.com/abulhanifah/weather-monitoring/internal/repositories"
 	"github.com/abulhanifah/weather-monitoring/pkg"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -97,12 +100,21 @@ func (s *DeviceService) UpdateDevice(ctx context.Context, id string, data map[st
 		return nil, errors.New("no fields to update")
 	}
 
-	if _, err := s.repo.FindByID(ctx, id); err != nil {
+	before, err := s.repo.FindByID(ctx, id)
+	if err != nil {
 		return nil, err
 	}
 
 	if err := s.repo.Update(ctx, id, patch); err != nil {
 		return nil, err
+	}
+
+	// catat history bila status berubah
+	if newStatus, ok := patch["status"].(string); ok && newStatus != before.Status {
+		if _, err := s.repo.CreateStatusHistory(ctx, id, newStatus); err != nil {
+			slog.ErrorContext(ctx, "Error CreateStatusHistory", slog.Any("id", id), slog.Any("error", err.Error()))
+			return nil, err
+		}
 	}
 
 	return s.repo.FindByID(ctx, id)
@@ -115,6 +127,62 @@ func (s *DeviceService) DeleteDevice(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
+var (
+	// ErrHeartbeatValidation payload heartbeat tidak valid (device_id/ts).
+	ErrHeartbeatValidation = errors.New("invalid heartbeat payload")
+	// ErrDeviceMismatch device_id payload beda dengan pemilik api key.
+	ErrDeviceMismatch = errors.New("device_id does not match api key")
+)
+
+// Heartbeat tandai device Active, simpan payload ke LatestHealth,
+// dan catat device status history.
+// Payload bebas (map), tapi device_id dan ts wajib; device_id harus
+// sama dengan device pemilik api key.
+func (s *DeviceService) Heartbeat(ctx context.Context, authedDeviceID string, payload map[string]any) (*models.Device, error) {
+	if authedDeviceID == "" {
+		return nil, errors.New("device id is required")
+	}
+	if len(payload) == 0 {
+		return nil, fmt.Errorf("%w: payload is required", ErrHeartbeatValidation)
+	}
+
+	deviceID, _ := payload["device_id"].(string)
+	if strings.TrimSpace(deviceID) == "" {
+		return nil, fmt.Errorf("%w: device_id is required", ErrHeartbeatValidation)
+	}
+	if deviceID != authedDeviceID {
+		return nil, ErrDeviceMismatch
+	}
+
+	ts, ok := pkg.ToUintFilter(payload["ts"])
+	if !ok || ts == 0 {
+		return nil, fmt.Errorf("%w: ts is required (unix timestamp)", ErrHeartbeatValidation)
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("%w: cannot encode payload", ErrHeartbeatValidation)
+	}
+
+	if _, err := s.repo.FindByID(ctx, deviceID); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Update(ctx, deviceID, map[string]any{
+		"status":        constants.StatusActive,
+		"latest_health": datatypes.JSON(raw),
+	}); err != nil {
+		return nil, err
+	}
+
+	if _, err := s.repo.CreateStatusHistory(ctx, deviceID, constants.StatusActive); err != nil {
+		slog.ErrorContext(ctx, "Error CreateStatusHistory", slog.Any("id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+
+	return s.repo.FindByID(ctx, deviceID)
+}
+
 func (s *DeviceService) CreateDevice(ctx context.Context, dev *models.Device) (*models.CreateDeviceResponse, error) {
 	// cek apakah device id sudah ada
 	exist, err := s.repo.FindByID(ctx, dev.ID)
@@ -125,6 +193,11 @@ func (s *DeviceService) CreateDevice(ctx context.Context, dev *models.Device) (*
 
 	if exist != nil {
 		return nil, fmt.Errorf("Error on Creating Device : Device ID was registered")
+	}
+
+	// default status saat create adalah installed
+	if dev.Status == "" {
+		dev.Status = constants.StatusInstalled
 	}
 
 	// simpan device

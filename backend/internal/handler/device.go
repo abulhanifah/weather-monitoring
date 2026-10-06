@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/abulhanifah/weather-monitoring/internal/middleware"
 	"github.com/abulhanifah/weather-monitoring/internal/models"
 	"github.com/abulhanifah/weather-monitoring/internal/services"
 	"github.com/abulhanifah/weather-monitoring/pkg"
@@ -288,5 +289,69 @@ func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 		Limit:     limit,
 		Total:     total,
 		TotalPage: pkg.TotalPages(total, limit),
+	})
+}
+
+// Heartbeat handler untuk POST /api/v1/ingest/heartbeat (auth API key device).
+// Ubah status device jadi Active, simpan payload ke LatestHealth,
+// dan catat device status history.
+// Heartbeat godoc
+// @Summary Device heartbeat
+// @Tags Ingest
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param body body models.HeartbeatRequest true "Payload telemetri (device_id dan ts wajib, field lain bebas)"
+// @Success 200 {object} models.MessageEnvelope
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 403 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/ingest/heartbeat [post]
+func (h *DeviceHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	deviceID, ok := middleware.DeviceIDFromContext(ctx)
+	if !ok {
+		pkg.WriteJSON(w, http.StatusUnauthorized, map[string]interface{}{
+			"error": "Unauthorized: Invalid API Key",
+		})
+		return
+	}
+
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": "Invalid payload",
+		})
+		return
+	}
+
+	_, err := h.svc.Heartbeat(ctx, deviceID, payload)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+		case errors.Is(err, services.ErrDeviceMismatch):
+			pkg.WriteJSON(w, http.StatusForbidden, map[string]interface{}{
+				"error": err.Error(),
+			})
+		case errors.Is(err, services.ErrHeartbeatValidation):
+			pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+		default:
+			pkg.WriteJSON(w, http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to process heartbeat",
+			})
+		}
+		return
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "OK",
 	})
 }

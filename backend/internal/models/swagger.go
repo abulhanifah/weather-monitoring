@@ -55,3 +55,11 @@ type DevicePatch struct {
 	Latitude    *float64 `json:"latitude,omitempty" example:"-6.2"`
 	Altitude    *float64 `json:"altitude,omitempty" example:"45"`
 }
+
+// HeartbeatRequest payload heartbeat.
+// device_id dan ts wajib; field lain bebas (object JSON dinamis),
+// seluruh payload disimpan ke latest_health.
+type HeartbeatRequest struct {
+	DeviceID string `json:"device_id" example:"WS-GRT-001"`
+	Ts       int64  `json:"ts" example:"1757308920"`
+}
