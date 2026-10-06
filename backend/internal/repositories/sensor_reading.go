@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/abulhanifah/weather-monitoring/internal/models"
@@ -25,6 +26,9 @@ func (r *SensorReadingRepository) Create(ctx context.Context, reading *models.Se
 	}
 	if reading.SensorID == 0 {
 		return errors.New("sensor_id is required")
+	}
+	if strings.TrimSpace(reading.DeviceID) == "" {
+		return errors.New("device_id is required")
 	}
 	if reading.ReadingTimeOrigin.IsZero() {
 		return errors.New("reading_time_origin is required")
@@ -58,6 +62,10 @@ func (r *SensorReadingRepository) CreateBatch(ctx context.Context, readings []mo
 	var valid []models.SensorReading
 	for i := range readings {
 		row := readings[i]
+		if strings.TrimSpace(row.DeviceID) == "" {
+			slog.ErrorContext(ctx, "Skip SensorReading: device_id is required", slog.Any("index", i))
+			continue
+		}
 		if row.SensorID == 0 {
 			slog.ErrorContext(ctx, "Skip SensorReading: sensor_id is required", slog.Any("index", i))
 			continue

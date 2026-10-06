@@ -40,8 +40,12 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	sensorHandler := handler.NewSensorHandler(sensorSvc)
 
 	sensorInstallRepo := repositories.NewSensorInstallationRepository(database)
-	sensorInstallSvc := services.NewSensorInstallationService(sensorInstallRepo, deviceRepo, sensorRepo, repositories.NewSensorReadingRepository(database))
+	sensorInstallSvc := services.NewSensorInstallationService(sensorInstallRepo, deviceRepo, sensorRepo)
 	sensorInstallHandler := handler.NewSensorInstallationHandler(sensorInstallSvc)
+
+	readingRepo := repositories.NewSensorReadingRepository(database)
+	readingSvc := services.NewSensorReadingService(sensorInstallRepo, readingRepo)
+	telemetryHandler := handler.NewTelemetryHandler(readingSvc)
 
 	// ----------------------------------------------------
 	// 1. PUBLIC ROUTES (Tanpa Auth)
@@ -83,8 +87,8 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	// ----------------------------------------------------
 	apiKeyAuth := middleware.APIKeyAuthMiddleware(deviceRepo, cfg.PrefixAPIKey)
 	mux.Handle("POST /api/v1/ingest/heartbeat", apiKeyAuth(http.HandlerFunc(deviceHandler.Heartbeat)))
-	mux.Handle("POST /api/v1/ingest/telemetry", apiKeyAuth(http.HandlerFunc(sensorInstallHandler.Telemetry)))
-	mux.Handle("POST /api/v1/ingest/telemetry/batch", apiKeyAuth(http.HandlerFunc(sensorInstallHandler.TelemetryBatch)))
+	mux.Handle("POST /api/v1/ingest/telemetry", apiKeyAuth(http.HandlerFunc(telemetryHandler.Telemetry)))
+	mux.Handle("POST /api/v1/ingest/telemetry/batch", apiKeyAuth(http.HandlerFunc(telemetryHandler.TelemetryBatch)))
 
 	return mux
 }

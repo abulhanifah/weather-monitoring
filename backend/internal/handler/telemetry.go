@@ -11,6 +11,14 @@ import (
 	"github.com/abulhanifah/weather-monitoring/pkg"
 )
 
+type TelemetryHandler struct {
+	svc *services.SensorReadingService
+}
+
+func NewTelemetryHandler(svc *services.SensorReadingService) *TelemetryHandler {
+	return &TelemetryHandler{svc: svc}
+}
+
 // Telemetry handler untuk POST /api/v1/ingest/telemetry (auth API key device).
 // Simpan readings telemetry ke sensor readings berdasar tipe terpasang aktif.
 // Telemetry godoc
@@ -26,7 +34,7 @@ import (
 // @Failure 403 {object} models.ErrorEnvelope
 // @Failure 500 {object} models.ErrorEnvelope
 // @Router /api/v1/ingest/telemetry [post]
-func (h *SensorInstallationHandler) Telemetry(w http.ResponseWriter, r *http.Request) {
+func (h *TelemetryHandler) Telemetry(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	deviceID, ok := middleware.DeviceIDFromContext(ctx)
@@ -83,7 +91,7 @@ func (h *SensorInstallationHandler) Telemetry(w http.ResponseWriter, r *http.Req
 // @Failure 403 {object} models.ErrorEnvelope
 // @Failure 500 {object} models.ErrorEnvelope
 // @Router /api/v1/ingest/telemetry/batch [post]
-func (h *SensorInstallationHandler) TelemetryBatch(w http.ResponseWriter, r *http.Request) {
+func (h *TelemetryHandler) TelemetryBatch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	deviceID, ok := middleware.DeviceIDFromContext(ctx)
