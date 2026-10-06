@@ -266,7 +266,7 @@ export default function DevicesPage() {
       </div>
 
       <form
-        className="mb-4 flex gap-2"
+        className="mb-4 flex flex-col gap-2 sm:flex-row"
         onSubmit={(e) => {
           e.preventDefault();
           setPage(1);
@@ -329,7 +329,8 @@ export default function DevicesPage() {
         <p>Memuat...</p>
       ) : (
         <>
-          <table className="w-full rounded bg-white text-sm shadow dark:bg-zinc-900">
+          <div className="overflow-x-auto rounded shadow">
+          <table className="w-full min-w-[640px] bg-white text-sm dark:bg-zinc-900">
             <thead>
               <tr className="border-b text-left dark:border-zinc-700">
                 <th className="px-3 py-2">ID</th>
@@ -388,6 +389,7 @@ export default function DevicesPage() {
               )}
             </tbody>
           </table>
+          </div>
 
           <div className="mt-4 flex items-center gap-3 text-sm">
             <button
@@ -413,10 +415,10 @@ export default function DevicesPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
           <form
             onSubmit={handleSubmit}
-            className="max-h-[90vh] w-full max-w-md overflow-auto rounded bg-white p-6 dark:bg-zinc-900"
+            className="max-h-[92vh] w-full max-w-md overflow-auto rounded-t-2xl bg-white p-6 sm:rounded-lg dark:bg-zinc-900"
           >
             <h2 className="mb-4 text-lg font-semibold">
               {editing ? `Edit ${editing.id}` : "Tambah Device"}
@@ -559,8 +561,8 @@ export default function DevicesPage() {
       )}
 
       {detail && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded bg-white p-6 dark:bg-zinc-900">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-lg overflow-auto rounded-t-2xl bg-white p-6 sm:rounded-lg dark:bg-zinc-900">
             <h2 className="mb-4 text-lg font-semibold">
               Detail {detail.id}
             </h2>

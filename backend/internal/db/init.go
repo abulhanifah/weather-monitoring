@@ -40,6 +40,9 @@ func Migrate(database *gorm.DB) error {
 		&models.User{},
 		&models.Location{},
 		&models.SensorType{},
+		&models.Sensor{},
+		&models.SensorInstallation{},
+		&models.SensorCalibration{},
 		&models.DeviceStatusHistory{},
 	)
 }

@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // DeviceCredentialsResponse response GET /api/v1/devices/{id}/credentials.
 type DeviceCredentialsResponse struct {
 	DeviceID string       `json:"device_id"`
@@ -49,6 +51,68 @@ type HealthEnvelope struct {
 // LocationInput body create location untuk dokumentasi swagger.
 type LocationInput struct {
 	Name string `json:"name" example:"Bogor"`
+}
+
+// SensorTypeInput body create sensor type untuk dokumentasi swagger.
+type SensorTypeInput struct {
+	Name            string   `json:"name" example:"temperature"`
+	UnitMeasurement *string  `json:"unit_measurement,omitempty" example:"°C"`
+	MinValue        *float64 `json:"min_value,omitempty" example:"-50"`
+	MaxValue        *float64 `json:"max_value,omitempty" example:"60"`
+	Precission      *int     `json:"precission,omitempty" example:"1"`
+}
+
+// SensorInput body create sensor untuk dokumentasi swagger.
+type SensorInput struct {
+	Name         string `json:"name" example:"Sensor Suhu 1"`
+	SensorTypeID uint   `json:"sensor_type_id" example:"1"`
+	Status       *bool  `json:"status,omitempty" example:"true"`
+}
+
+// SensorPatch body PATCH sensor untuk dokumentasi swagger.
+type SensorPatch struct {
+	Name         *string `json:"name,omitempty" example:"Sensor Suhu 1"`
+	SensorTypeID *uint   `json:"sensor_type_id,omitempty" example:"1"`
+	Status       *bool   `json:"status,omitempty" example:"true"`
+}
+
+// SensorEnvelope response untuk dokumentasi swagger (bentuk aktual: {message, data}).
+type SensorEnvelope struct {
+	Message string `json:"message" example:"Sensor created successfully"`
+	Data    Sensor `json:"data"`
+}
+
+// SensorCalibrationListResponse response GET /api/v1/sensors/{id}/calibrations.
+type SensorCalibrationListResponse struct {
+	SensorID uint                 `json:"sensor_id"`
+	Total    int                  `json:"total"`
+	Data     []SensorCalibration  `json:"data"`
+}
+
+// SensorCalibrationInput body create kalibrasi untuk dokumentasi swagger.
+type SensorCalibrationInput struct {
+	Offset   *float64   `json:"offset,omitempty" example:"0.5"`
+	Scale    *float64   `json:"scale,omitempty" example:"1"`
+	FromDate *time.Time `json:"from_date,omitempty"`
+	ToDate   *time.Time `json:"to_date,omitempty"`
+}
+
+// SensorCalibrationEnvelope response untuk dokumentasi swagger.
+type SensorCalibrationEnvelope struct {
+	Message string            `json:"message" example:"Calibration created successfully"`
+	Data    SensorCalibration `json:"data"`
+}
+
+// SensorInstallationEnvelope response untuk dokumentasi swagger.
+type SensorInstallationEnvelope struct {
+	Message string             `json:"message" example:"Sensor installed successfully"`
+	Data    SensorInstallation `json:"data"`
+}
+
+// SensorTypeEnvelope response untuk dokumentasi swagger (bentuk aktual: {message, data}).
+type SensorTypeEnvelope struct {
+	Message string     `json:"message" example:"Sensor type created successfully"`
+	Data    SensorType `json:"data"`
 }
 
 // DevicePatch body PATCH device untuk dokumentasi swagger.

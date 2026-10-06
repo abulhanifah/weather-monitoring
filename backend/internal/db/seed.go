@@ -28,25 +28,36 @@ func Seed(database *gorm.DB) error {
 		}
 	}
 
-	sensorTypes := []string{
-		"temperature",
-		"humidity",
-		"air_pressure",
-		"rainfall",
-		"wind_speed",
-		"wind_direction",
-		"solar_radiation",
+	strPtr := func(s string) *string { return &s }
+	floatPtr := func(f float64) *float64 { return &f }
+	intPtr := func(i int) *int { return &i }
+
+	sensorTypes := []models.SensorType{
+		{Name: "temperature", UnitMeasurement: strPtr("°C"), MinValue: floatPtr(-50), MaxValue: floatPtr(60), Precission: intPtr(1)},
+		{Name: "humidity", UnitMeasurement: strPtr("%"), MinValue: floatPtr(0), MaxValue: floatPtr(100), Precission: intPtr(1)},
+		{Name: "air_pressure", UnitMeasurement: strPtr("hPa"), MinValue: floatPtr(300), MaxValue: floatPtr(1100), Precission: intPtr(1)},
+		{Name: "rainfall", UnitMeasurement: strPtr("mm"), MinValue: floatPtr(0), MaxValue: floatPtr(500), Precission: intPtr(1)},
+		{Name: "wind_speed", UnitMeasurement: strPtr("m/s"), MinValue: floatPtr(0), MaxValue: floatPtr(75), Precission: intPtr(1)},
+		{Name: "wind_direction", UnitMeasurement: strPtr("°"), MinValue: floatPtr(0), MaxValue: floatPtr(360), Precission: intPtr(0)},
+		{Name: "solar_radiation", UnitMeasurement: strPtr("W/m2"), MinValue: floatPtr(0), MaxValue: floatPtr(2000), Precission: intPtr(0)},
 	}
-	for _, name := range sensorTypes {
-		var st models.SensorType
-		res := database.Where("name = ?", name).Attrs(models.SensorType{Name: name}).FirstOrCreate(&st)
+	for _, st := range sensorTypes {
+		sensorType := st
+		res := database.Where("name = ?", sensorType.Name).Attrs(sensorType).FirstOrCreate(&sensorType)
 		if res.Error != nil {
 			return res.Error
 		}
 		if res.RowsAffected == 0 {
-			log.Printf("Seed sensor type %s sudah ada, dilewati", name)
+			log.Printf("Seed sensor type %s sudah ada, dilewati", sensorType.Name)
+			// Backfill kolom pengukuran untuk baris lama yang masih null
+			database.Model(&models.SensorType{}).Where("name = ? AND unit_measurement IS NULL", sensorType.Name).Updates(map[string]any{
+				"unit_measurement": sensorType.UnitMeasurement,
+				"min_value":        sensorType.MinValue,
+				"max_value":        sensorType.MaxValue,
+				"precission":       sensorType.Precission,
+			})
 		} else {
-			log.Printf("Seed sensor type %s berhasil", name)
+			log.Printf("Seed sensor type %s berhasil", sensorType.Name)
 		}
 	}
 

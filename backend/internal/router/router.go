@@ -31,6 +31,18 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	locationSvc := services.NewLocationService(locationRepo)
 	locationHandler := handler.NewLocationHandler(locationSvc)
 
+	sensorTypeRepo := repositories.NewSensorTypeRepository(database)
+	sensorTypeSvc := services.NewSensorTypeService(sensorTypeRepo)
+	sensorTypeHandler := handler.NewSensorTypeHandler(sensorTypeSvc)
+
+	sensorRepo := repositories.NewSensorRepository(database)
+	sensorSvc := services.NewSensorService(sensorRepo, sensorTypeRepo, repositories.NewSensorCalibrationRepository(database))
+	sensorHandler := handler.NewSensorHandler(sensorSvc)
+
+	sensorInstallRepo := repositories.NewSensorInstallationRepository(database)
+	sensorInstallSvc := services.NewSensorInstallationService(sensorInstallRepo, deviceRepo, sensorRepo)
+	sensorInstallHandler := handler.NewSensorInstallationHandler(sensorInstallSvc)
+
 	// ----------------------------------------------------
 	// 1. PUBLIC ROUTES (Tanpa Auth)
 	// ----------------------------------------------------
@@ -53,6 +65,18 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	mux.Handle("GET /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.ListLocations)))
 	mux.Handle("GET /api/v1/locations/{id}", jwtAuth(http.HandlerFunc(locationHandler.GetLocation)))
 	mux.Handle("POST /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.CreateLocation)))
+	mux.Handle("GET /api/v1/sensor-types", jwtAuth(http.HandlerFunc(sensorTypeHandler.ListSensorTypes)))
+	mux.Handle("POST /api/v1/sensor-types", jwtAuth(http.HandlerFunc(sensorTypeHandler.CreateSensorType)))
+	mux.Handle("GET /api/v1/sensors", jwtAuth(http.HandlerFunc(sensorHandler.ListSensors)))
+	mux.Handle("POST /api/v1/sensors", jwtAuth(http.HandlerFunc(sensorHandler.CreateSensor)))
+	mux.Handle("GET /api/v1/sensors/{id}", jwtAuth(http.HandlerFunc(sensorHandler.GetSensor)))
+	mux.Handle("PATCH /api/v1/sensors/{id}", jwtAuth(http.HandlerFunc(sensorHandler.UpdateSensor)))
+	mux.Handle("DELETE /api/v1/sensors/{id}", jwtAuth(http.HandlerFunc(sensorHandler.DeleteSensor)))
+	mux.Handle("GET /api/v1/sensors/{id}/calibrations", jwtAuth(http.HandlerFunc(sensorHandler.ListCalibrations)))
+	mux.Handle("POST /api/v1/sensors/{id}/calibrations", jwtAuth(http.HandlerFunc(sensorHandler.CreateCalibration)))
+	mux.Handle("POST /api/v1/devices/{device_id}/sensors/{sensor_id}", jwtAuth(http.HandlerFunc(sensorInstallHandler.InstallSensor)))
+	mux.Handle("DELETE /api/v1/devices/{device_id}/sensors/{sensor_id}", jwtAuth(http.HandlerFunc(sensorInstallHandler.UninstallSensor)))
+	mux.Handle("GET /api/v1/installations/{id}", jwtAuth(http.HandlerFunc(sensorInstallHandler.GetInstallation)))
 
 	// ----------------------------------------------------
 	// 3. API KEY ROUTES (Membutuhkan Auth API Key) - Ingest Device
