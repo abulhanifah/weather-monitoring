@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -179,6 +180,127 @@ func (s *SensorReadingService) buildReadings(ctx context.Context, deviceID strin
 		}
 	}
 	return readings, skipped
+}
+
+// Interval agregasi yang didukung untuk GET /api/v1/readings.
+const (
+	IntervalRaw = "raw"
+	Interval1m  = "1m"
+	Interval1h  = "1h"
+	Interval1d  = "1d"
+)
+
+// maxAggregatedRows batas baris yang ditarik untuk agregasi di service.
+const maxAggregatedRows = 20000
+
+// GetReadingsRaw ambil readings paginated apa adanya.
+func (s *SensorReadingService) GetReadingsRaw(ctx context.Context, params map[string]any) ([]models.SensorReading, int, error) {
+	return s.readingRepo.FindReadings(ctx, params)
+}
+
+// GetReadingsAggregated ambil readings lalu bucket per interval di service.
+// Repo hanya memfilter datetime; agregasi (avg/min/max/count per
+// device+sensor+bucket) dikerjakan di sini lalu hasilnya di-paginate.
+func (s *SensorReadingService) GetReadingsAggregated(ctx context.Context, params map[string]any, interval string, page, limit int) ([]models.AggregatedReading, int, error) {
+	var bucketSize time.Duration
+	switch interval {
+	case Interval1m:
+		bucketSize = time.Minute
+	case Interval1h:
+		bucketSize = time.Hour
+	case Interval1d:
+		bucketSize = 24 * time.Hour
+	default:
+		return nil, 0, errors.New("invalid interval, allowed: raw, 1m, 1h, 1d")
+	}
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	rows, total, err := s.readingRepo.FindReadings(ctx, withNoPagination(params))
+	if err != nil {
+		return nil, 0, err
+	}
+	if total > maxAggregatedRows {
+		return nil, 0, errors.New("too many rows, narrow the time range or use a bigger interval")
+	}
+
+	type bucketKey struct {
+		deviceID string
+		sensorID uint
+		bucket   time.Time
+	}
+	agg := map[bucketKey]*models.AggregatedReading{}
+	for _, row := range rows {
+		ts := row.ReadingTimeOrigin.UTC()
+		var bucket time.Time
+		if bucketSize == 24*time.Hour {
+			bucket = time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
+		} else {
+			bucket = ts.Truncate(bucketSize)
+		}
+		key := bucketKey{deviceID: row.DeviceID, sensorID: row.SensorID, bucket: bucket}
+		b, ok := agg[key]
+		if !ok {
+			b = &models.AggregatedReading{
+				Time:     bucket,
+				DeviceID: row.DeviceID,
+				SensorID: row.SensorID,
+				Min:      row.Value,
+				Max:      row.Value,
+			}
+			agg[key] = b
+		}
+		b.Count++
+		b.Avg += (row.Value - b.Avg) / float64(b.Count)
+		if row.Value < b.Min {
+			b.Min = row.Value
+		}
+		if row.Value > b.Max {
+			b.Max = row.Value
+		}
+	}
+
+	buckets := make([]models.AggregatedReading, 0, len(agg))
+	for _, b := range agg {
+		buckets = append(buckets, *b)
+	}
+	sort.Slice(buckets, func(i, j int) bool {
+		if buckets[i].Time.Equal(buckets[j].Time) {
+			if buckets[i].DeviceID == buckets[j].DeviceID {
+				return buckets[i].SensorID < buckets[j].SensorID
+			}
+			return buckets[i].DeviceID < buckets[j].DeviceID
+		}
+		return buckets[i].Time.After(buckets[j].Time)
+	})
+
+	totalBuckets := len(buckets)
+	start := (page - 1) * limit
+	if start >= totalBuckets {
+		return []models.AggregatedReading{}, totalBuckets, nil
+	}
+	end := start + limit
+	if end > totalBuckets {
+		end = totalBuckets
+	}
+	return buckets[start:end], totalBuckets, nil
+}
+
+func withNoPagination(params map[string]any) map[string]any {
+	out := make(map[string]any, len(params)+1)
+	for k, v := range params {
+		out[k] = v
+	}
+	out["page"] = 1
+	out["limit"] = 0
+	return out
 }
 
 func toTelemetryFloat(v any) (float64, bool) {

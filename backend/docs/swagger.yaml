@@ -844,6 +844,73 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorEnvelope'
+  /api/v1/readings:
+    get:
+      security:
+      - BearerAuth: []
+      produces:
+      - application/json
+      tags:
+      - Readings
+      summary: List sensor readings (raw atau agregasi)
+      parameters:
+      - type: integer
+        default: 1
+        minimum: 1
+        name: page
+        in: query
+      - type: integer
+        default: 100
+        minimum: 1
+        maximum: 1000
+        name: limit
+        in: query
+      - type: string
+        default: reading_time_origin desc
+        name: sort
+        in: query
+      - type: string
+        name: device_id
+        in: query
+      - type: integer
+        name: sensor_id
+        in: query
+      - type: string
+        name: sensor_type
+        in: query
+      - type: string
+        name: from
+        in: query
+      - type: string
+        name: to
+        in: query
+      - type: string
+        default: raw
+        enum:
+        - raw
+        - 1m
+        - 1h
+        - 1d
+        name: interval
+        in: query
+      responses:
+        '200':
+          description: OK, SensorReadingListResponse bila raw, AggregatedReadingListResponse
+            bila agregasi
+          schema:
+            $ref: '#/definitions/models.SensorReadingListResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
   /api/v1/locations:
     get:
       security:
@@ -1440,6 +1507,72 @@ definitions:
       status:
         type: boolean
         example: true
+  models.SensorReading:
+    type: object
+    properties:
+      created_at:
+        type: string
+      device_id:
+        type: string
+      id:
+        type: integer
+      reading_time_origin:
+        type: string
+        format: date-time
+      sensor_id:
+        type: integer
+      value:
+        type: number
+  models.AggregatedReading:
+    type: object
+    properties:
+      avg:
+        type: number
+      count:
+        type: integer
+      device_id:
+        type: string
+      max:
+        type: number
+      min:
+        type: number
+      sensor_id:
+        type: integer
+      time:
+        type: string
+        format: date-time
+  models.AggregatedReadingListResponse:
+    type: object
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/models.AggregatedReading'
+      interval:
+        type: string
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_page:
+        type: integer
+  models.SensorReadingListResponse:
+    type: object
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/models.SensorReading'
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_page:
+        type: integer
   models.SensorType:
     type: object
     properties:

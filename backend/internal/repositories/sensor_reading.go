@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abulhanifah/weather-monitoring/internal/models"
+	"github.com/abulhanifah/weather-monitoring/pkg"
 	"gorm.io/gorm"
 )
 
@@ -129,4 +130,64 @@ func (r *SensorReadingRepository) CreateBatch(ctx context.Context, readings []mo
 	}
 	slog.InfoContext(ctx, "SensorReading CreateBatch done", slog.Int("saved", len(fresh)), slog.Int("skipped", len(readings)-len(fresh)))
 	return nil
+}
+
+// FindReadings ambil readings dengan filter datetime di level repo.
+// Keys params: "filter" (map[string]any: device_id string exact,
+// sensor_id exact, sensor_type nama exact, from/to time.Time),
+// "page" (default 1), "limit" (default 100, max 1000, <=0 = tanpa limit),
+// "sort" (reading_time_origin asc|desc, default desc).
+// Return: list readings, total data (sebelum page/limit), error.
+func (r *SensorReadingRepository) FindReadings(ctx context.Context, params map[string]any) ([]models.SensorReading, int, error) {
+	page := pkg.ToIntParam(params["page"], 1)
+	limit := pkg.ToIntParam(params["limit"], 100)
+	if page < 1 {
+		page = 1
+	}
+	paginate := limit > 0
+	if paginate && limit > 1000 {
+		limit = 1000
+	}
+	sort := pkg.ToSortParam(params["sort"], "reading_time_origin desc", []string{"reading_time_origin"})
+	sort = "sensor_readings." + sort
+
+	base := r.db.WithContext(ctx).Model(&models.SensorReading{})
+
+	if filter, ok := params["filter"].(map[string]any); ok && filter != nil {
+		if v, ok := filter["device_id"].(string); ok && v != "" {
+			base = base.Where("sensor_readings.device_id = ?", v)
+		}
+		if sensorID, ok := pkg.ToUintFilter(filter["sensor_id"]); ok {
+			base = base.Where("sensor_readings.sensor_id = ?", sensorID)
+		}
+		if v, ok := filter["sensor_type"].(string); ok && v != "" {
+			base = base.Joins("JOIN sensors ON sensors.id = sensor_readings.sensor_id AND sensors.deleted_at IS NULL").
+				Joins("JOIN sensor_types ON sensor_types.id = sensors.sensor_type_id AND sensor_types.deleted_at IS NULL").
+				Where("sensor_types.name = ?", v)
+		}
+		if from, ok := filter["from"].(time.Time); ok && !from.IsZero() {
+			base = base.Where("sensor_readings.reading_time_origin >= ?", from)
+		}
+		if to, ok := filter["to"].(time.Time); ok && !to.IsZero() {
+			base = base.Where("sensor_readings.reading_time_origin <= ?", to)
+		}
+	}
+
+	var total int64
+	if err := base.Count(&total).Error; err != nil {
+		slog.ErrorContext(ctx, "Error FindReadings Count", slog.Any("params", params), slog.Any("error", err.Error()))
+		return nil, 0, err
+	}
+
+	var readings []models.SensorReading
+	q := base.Order(sort)
+	if paginate {
+		q = q.Offset((page - 1) * limit).Limit(limit)
+	}
+	if err := q.Find(&readings).Error; err != nil {
+		slog.ErrorContext(ctx, "Error FindReadings Find", slog.Any("params", params), slog.Any("error", err.Error()))
+		return nil, 0, err
+	}
+
+	return readings, int(total), nil
 }

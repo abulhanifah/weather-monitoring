@@ -13,3 +13,33 @@ type SensorReading struct {
 	Value             float64   `gorm:"not null" json:"value"`
 	CreatedAt         time.Time `json:"created_at"`
 }
+
+// SensorReadingListResponse response paginated untuk GET /api/v1/readings (raw).
+type SensorReadingListResponse struct {
+	Data      []SensorReading `json:"data"`
+	Page      int             `json:"page"`
+	Limit     int             `json:"limit"`
+	Total     int             `json:"total"`
+	TotalPage int             `json:"total_page"`
+}
+
+// AggregatedReading satu bucket agregasi readings.
+type AggregatedReading struct {
+	Time     time.Time `json:"time"`
+	DeviceID string    `json:"device_id"`
+	SensorID uint      `json:"sensor_id"`
+	Avg      float64   `json:"avg"`
+	Min      float64   `json:"min"`
+	Max      float64   `json:"max"`
+	Count    int       `json:"count"`
+}
+
+// AggregatedReadingListResponse response GET /api/v1/readings (interval agregasi).
+type AggregatedReadingListResponse struct {
+	Data      []AggregatedReading `json:"data"`
+	Page      int                 `json:"page"`
+	Limit     int                 `json:"limit"`
+	Total     int                 `json:"total"`
+	TotalPage int                 `json:"total_page"`
+	Interval  string              `json:"interval"`
+}

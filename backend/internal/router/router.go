@@ -46,6 +46,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	readingRepo := repositories.NewSensorReadingRepository(database)
 	readingSvc := services.NewSensorReadingService(sensorInstallRepo, readingRepo)
 	telemetryHandler := handler.NewTelemetryHandler(readingSvc)
+	readingHandler := handler.NewReadingHandler(readingSvc)
 
 	// ----------------------------------------------------
 	// 1. PUBLIC ROUTES (Tanpa Auth)
@@ -89,6 +90,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	mux.Handle("POST /api/v1/ingest/heartbeat", apiKeyAuth(http.HandlerFunc(deviceHandler.Heartbeat)))
 	mux.Handle("POST /api/v1/ingest/telemetry", apiKeyAuth(http.HandlerFunc(telemetryHandler.Telemetry)))
 	mux.Handle("POST /api/v1/ingest/telemetry/batch", apiKeyAuth(http.HandlerFunc(telemetryHandler.TelemetryBatch)))
+	mux.Handle("GET /api/v1/readings", jwtAuth(http.HandlerFunc(readingHandler.ListReadings)))
 
 	return mux
 }
