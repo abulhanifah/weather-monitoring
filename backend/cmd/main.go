@@ -13,6 +13,7 @@ import (
 
 	"github.com/abulhanifah/weather-monitoring/internal/config"
 	"github.com/abulhanifah/weather-monitoring/internal/db"
+	"github.com/abulhanifah/weather-monitoring/internal/middleware"
 	"github.com/abulhanifah/weather-monitoring/internal/repositories"
 	"github.com/abulhanifah/weather-monitoring/internal/router"
 	"github.com/abulhanifah/weather-monitoring/internal/scheduler"
@@ -58,7 +59,7 @@ func main() {
 	}()
 	srv := &http.Server{
 		Addr:    ":" + cfg.AppPort,
-		Handler: r,
+		Handler: middleware.CORSMiddleware(cfg.CORSAllowedOrigins)(r),
 	}
 
 	go func() {

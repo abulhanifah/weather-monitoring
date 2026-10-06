@@ -23,6 +23,7 @@ type Config struct {
 	PrefixAPIKey       string
 	SchedulerInterval  time.Duration
 	HeartbeatThreshold time.Duration
+	CORSAllowedOrigins string
 }
 
 func Load() *Config {
@@ -49,6 +50,8 @@ func Load() *Config {
 
 		SchedulerInterval:  getDuration("SCHEDULER_INTERVAL", 5*time.Minute),
 		HeartbeatThreshold: getDuration("HEARTBEAT_THRESHOLD", 5*time.Minute),
+
+		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "*"),
 	}
 }
 

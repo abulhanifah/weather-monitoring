@@ -1,5 +1,12 @@
 package models
 
+// DeviceCredentialsResponse response GET /api/v1/devices/{id}/credentials.
+type DeviceCredentialsResponse struct {
+	DeviceID string       `json:"device_id"`
+	Total    int          `json:"total"`
+	Data     []APIKeyMeta `json:"data"`
+}
+
 // Envelope response untuk dokumentasi swagger (bentuk aktual: {message, data}).
 type DeviceCreateEnvelope struct {
 	Message string               `json:"message" example:"Device created successfully"`

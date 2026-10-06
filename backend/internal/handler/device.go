@@ -164,6 +164,54 @@ func (h *DeviceHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetCredentials handler untuk GET /api/v1/devices/{id}/credentials.
+// Mengembalikan daftar api key meta (masking) device.
+// GetCredentials godoc
+// @Summary Daftar API key device (masking)
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Success 200 {object} models.DeviceCredentialsResponse
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id}/credentials [get]
+func (h *DeviceHandler) GetCredentials(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	metas, err := h.svc.GetDeviceCredentials(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+			return
+		}
+		if err.Error() == "device id is required" {
+			pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+			return
+		}
+		pkg.WriteJSON(w, http.StatusInternalServerError, map[string]interface{}{
+			"error": "Failed to fetch device credentials",
+		})
+		return
+	}
+
+	if metas == nil {
+		metas = []models.APIKeyMeta{}
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, models.DeviceCredentialsResponse{
+		DeviceID: id,
+		Total:    len(metas),
+		Data:     metas,
+	})
+}
+
 // RotateCredentials handler untuk POST /api/v1/devices/{id}/credentials/rotate.
 // Me-revoke api key lama lalu mengembalikan raw key baru (hanya 1x).
 // RotateCredentials godoc

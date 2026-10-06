@@ -308,6 +308,17 @@ func (s *DeviceService) CreateDeviceAPIKey(ctx context.Context, deviceID string)
 	return rawKey, meta, nil
 }
 
+// GetDeviceCredentials ambil daftar api key meta device.
+func (s *DeviceService) GetDeviceCredentials(ctx context.Context, deviceID string) ([]models.APIKeyMeta, error) {
+	if deviceID == "" {
+		return nil, errors.New("device id is required")
+	}
+	if _, err := s.repo.FindByID(ctx, deviceID); err != nil {
+		return nil, err
+	}
+	return s.repo.FindAPIKeysByDeviceID(ctx, deviceID)
+}
+
 // RotateDeviceAPIKey revoke semua api key aktif lalu generate yang baru.
 // Raw key hanya dikembalikan 1x ke caller.
 func (s *DeviceService) RotateDeviceAPIKey(ctx context.Context, deviceID string) (*models.GenerateAPIKeyResponse, error) {

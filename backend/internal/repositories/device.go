@@ -85,6 +85,16 @@ func (r *DeviceRepository) RevokeAPIKeysByDeviceID(ctx context.Context, deviceID
 	return nil
 }
 
+// FindAPIKeysByDeviceID ambil semua api key meta device, terbaru dulu.
+func (r *DeviceRepository) FindAPIKeysByDeviceID(ctx context.Context, deviceID string) ([]models.APIKeyMeta, error) {
+	var metas []models.APIKeyMeta
+	if err := r.db.WithContext(ctx).Where("device_id = ?", deviceID).Order("created_at desc").Find(&metas).Error; err != nil {
+		slog.ErrorContext(ctx, "Error FindAPIKeysByDeviceID", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	return metas, nil
+}
+
 // FindAPIKeyByHash cari api key aktif berdasar hash.
 func (r *DeviceRepository) FindAPIKeyByHash(ctx context.Context, hash string) (*models.APIKeyMeta, error) {
 	var meta models.APIKeyMeta
