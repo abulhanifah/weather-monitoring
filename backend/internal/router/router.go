@@ -48,6 +48,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	mux.Handle("PATCH /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.UpdateDevice)))
 	mux.Handle("DELETE /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.DeleteDevice)))
 	mux.Handle("POST /api/v1/devices/{id}/credentials/rotate", jwtAuth(http.HandlerFunc(deviceHandler.RotateCredentials)))
+	mux.Handle("GET /api/v1/devices/{id}/health", jwtAuth(http.HandlerFunc(deviceHandler.HealthHistory)))
 	mux.Handle("GET /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.ListLocations)))
 	mux.Handle("GET /api/v1/locations/{id}", jwtAuth(http.HandlerFunc(locationHandler.GetLocation)))
 	mux.Handle("POST /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.CreateLocation)))

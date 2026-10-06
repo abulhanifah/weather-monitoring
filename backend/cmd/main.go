@@ -13,7 +13,10 @@ import (
 
 	"github.com/abulhanifah/weather-monitoring/internal/config"
 	"github.com/abulhanifah/weather-monitoring/internal/db"
+	"github.com/abulhanifah/weather-monitoring/internal/repositories"
 	"github.com/abulhanifah/weather-monitoring/internal/router"
+	"github.com/abulhanifah/weather-monitoring/internal/scheduler"
+	"github.com/abulhanifah/weather-monitoring/internal/services"
 )
 
 // @title Weather Monitoring API
@@ -43,6 +46,16 @@ func main() {
 	}
 
 	r := router.New(cfg, database)
+
+	// Scheduler cek heartbeat basi (jalan tiap SCHEDULER_INTERVAL)
+	deviceSvc := services.NewService(cfg, repositories.NewRepository(database))
+	sch, err := scheduler.StartHeartbeatChecker(cfg, deviceSvc)
+	if err != nil {
+		log.Fatalf("Scheduler gagal start: %v", err)
+	}
+	defer func() {
+		_ = sch.Shutdown()
+	}()
 	srv := &http.Server{
 		Addr:    ":" + cfg.AppPort,
 		Handler: r,

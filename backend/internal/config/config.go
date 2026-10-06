@@ -3,23 +3,26 @@ package config
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	AppPort      string
-	AuthSecret   string
-	DBHost       string
-	DBPort       string
-	DBUser       string
-	DBPassword   string
-	DBName       string
-	DBSSLMode    string
-	MQTTBroker   string
-	MQTTTopic    string
-	MQTTClientID string
-	PrefixAPIKey string
+	AppPort            string
+	AuthSecret         string
+	DBHost             string
+	DBPort             string
+	DBUser             string
+	DBPassword         string
+	DBName             string
+	DBSSLMode          string
+	MQTTBroker         string
+	MQTTTopic          string
+	MQTTClientID       string
+	PrefixAPIKey       string
+	SchedulerInterval  time.Duration
+	HeartbeatThreshold time.Duration
 }
 
 func Load() *Config {
@@ -43,6 +46,9 @@ func Load() *Config {
 		// MQTTClientID: getEnv("MQTT_CLIENT_ID", "my-go-service"),
 
 		PrefixAPIKey: getEnv("PREFIX_API_KEY", "apikey_"),
+
+		SchedulerInterval:  getDuration("SCHEDULER_INTERVAL", 5*time.Minute),
+		HeartbeatThreshold: getDuration("HEARTBEAT_THRESHOLD", 5*time.Minute),
 	}
 }
 
@@ -51,4 +57,17 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getDuration(key string, fallback time.Duration) time.Duration {
+	value, exists := os.LookupEnv(key)
+	if !exists || value == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(value)
+	if err != nil || d <= 0 {
+		log.Printf("ENV %s tidak valid (%q), pakai default %s", key, value, fallback)
+		return fallback
+	}
+	return d
 }

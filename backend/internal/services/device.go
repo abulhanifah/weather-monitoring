@@ -127,6 +127,62 @@ func (s *DeviceService) DeleteDevice(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
+// GetStatusHistory ambil histori status device (terbaru dulu).
+func (s *DeviceService) GetStatusHistory(ctx context.Context, deviceID string, limit int) ([]models.DeviceStatusHistory, error) {
+	if deviceID == "" {
+		return nil, errors.New("device id is required")
+	}
+	if _, err := s.repo.FindByID(ctx, deviceID); err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	return s.repo.FindStatusHistory(ctx, deviceID, limit)
+}
+
+// MarkStaleDevicesDisconnected ubah device Active yang heartbeat terakhirnya
+// (created_at histori terbaru, atau created_at device bila belum ada histori)
+// sudah melewati threshold menjadi Disconnected, lalu catat history.
+// Return jumlah device yang diubah.
+func (s *DeviceService) MarkStaleDevicesDisconnected(ctx context.Context, threshold time.Duration) (int, error) {
+	devices, err := s.repo.FindDevicesByStatus(ctx, constants.StatusActive)
+	if err != nil {
+		return 0, err
+	}
+
+	marked := 0
+	now := time.Now()
+	for _, dev := range devices {
+		lastSeen := dev.CreatedAt
+		if hist, err := s.repo.FindLatestStatusHistory(ctx, dev.ID); err != nil {
+			return marked, err
+		} else if hist != nil {
+			lastSeen = hist.CreatedAt
+		}
+
+		if now.Sub(lastSeen) <= threshold {
+			continue
+		}
+
+		if err := s.repo.Update(ctx, dev.ID, map[string]any{"status": constants.StatusDisconnected}); err != nil {
+			slog.ErrorContext(ctx, "Error MarkStaleDevice", slog.Any("id", dev.ID), slog.Any("error", err.Error()))
+			return marked, err
+		}
+		if _, err := s.repo.CreateStatusHistory(ctx, dev.ID, constants.StatusDisconnected); err != nil {
+			slog.ErrorContext(ctx, "Error CreateStatusHistory", slog.Any("id", dev.ID), slog.Any("error", err.Error()))
+			return marked, err
+		}
+		marked++
+		slog.InfoContext(ctx, "Device marked disconnected (stale heartbeat)", slog.Any("id", dev.ID))
+	}
+
+	return marked, nil
+}
+
 var (
 	// ErrHeartbeatValidation payload heartbeat tidak valid (device_id/ts).
 	ErrHeartbeatValidation = errors.New("invalid heartbeat payload")

@@ -109,6 +109,45 @@ func (r *DeviceRepository) CreateStatusHistory(ctx context.Context, deviceID, st
 	return hist, nil
 }
 
+// FindStatusHistory ambil histori status device, terbaru dulu.
+func (r *DeviceRepository) FindStatusHistory(ctx context.Context, deviceID string, limit int) ([]models.DeviceStatusHistory, error) {
+	var hists []models.DeviceStatusHistory
+	q := r.db.WithContext(ctx).Where("device_id = ?", deviceID).Order("created_at desc")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if err := q.Find(&hists).Error; err != nil {
+		slog.ErrorContext(ctx, "Error FindStatusHistory", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	return hists, nil
+}
+
+// FindLatestStatusHistory ambil histori status terakhir device.
+// Return nil, nil bila belum ada histori.
+func (r *DeviceRepository) FindLatestStatusHistory(ctx context.Context, deviceID string) (*models.DeviceStatusHistory, error) {
+	var hist models.DeviceStatusHistory
+	err := r.db.WithContext(ctx).Where("device_id = ?", deviceID).Order("created_at desc").First(&hist).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		slog.ErrorContext(ctx, "Error FindLatestStatusHistory", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	return &hist, nil
+}
+
+// FindDevicesByStatus ambil semua device dengan status tertentu.
+func (r *DeviceRepository) FindDevicesByStatus(ctx context.Context, status string) ([]models.Device, error) {
+	var devices []models.Device
+	if err := r.db.WithContext(ctx).Where("status = ?", status).Find(&devices).Error; err != nil {
+		slog.ErrorContext(ctx, "Error FindDevicesByStatus", slog.Any("status", status), slog.Any("error", err.Error()))
+		return nil, err
+	}
+	return devices, nil
+}
+
 // GetPaginated ambil daftar device dengan filter, page, limit, sort dari params.
 // Keys params: "filter" (map[string]any: status/id exact, name LIKE),
 // "page" (int, default 1), "limit" (int, default 10, max 100),

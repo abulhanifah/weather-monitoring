@@ -355,3 +355,58 @@ func (h *DeviceHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 		"message": "OK",
 	})
 }
+
+// HealthHistory handler untuk GET /api/v1/devices/{id}/health.
+// Mengembalikan histori status device, terbaru dulu.
+// HealthHistory godoc
+// @Summary Histori status device
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Param limit query int false "Limit" default(50) minimum(1) maximum(200)
+// @Success 200 {object} models.DeviceHealthResponse
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id}/health [get]
+func (h *DeviceHandler) HealthHistory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit < 1 {
+		limit = 50
+	}
+
+	hists, err := h.svc.GetStatusHistory(ctx, id, limit)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+			return
+		}
+		if err.Error() == "device id is required" {
+			pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+			return
+		}
+		pkg.WriteJSON(w, http.StatusInternalServerError, map[string]interface{}{
+			"error": "Failed to fetch device health history",
+		})
+		return
+	}
+
+	if hists == nil {
+		hists = []models.DeviceStatusHistory{}
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, models.DeviceHealthResponse{
+		DeviceID: id,
+		Total:    len(hists),
+		Data:     hists,
+	})
+}

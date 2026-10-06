@@ -3,6 +3,7 @@ module github.com/abulhanifah/weather-monitoring
 go 1.26.0
 
 require (
+	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/swaggo/http-swagger v1.3.4
@@ -28,8 +29,10 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	golang.org/x/mod v0.41.0 // indirect
