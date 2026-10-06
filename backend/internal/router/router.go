@@ -8,7 +8,10 @@ import (
 	"github.com/abulhanifah/weather-monitoring/internal/middleware"
 	"github.com/abulhanifah/weather-monitoring/internal/repositories"
 	"github.com/abulhanifah/weather-monitoring/internal/services"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/gorm"
+
+	_ "github.com/abulhanifah/weather-monitoring/docs"
 )
 
 // New mengembalikan HTTP router yang sudah dikonfigurasi
@@ -33,6 +36,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	// ----------------------------------------------------
 	mux.HandleFunc("GET /health", handler.HealthCheck)
 	mux.HandleFunc("POST /api/v1/login", userHandler.Login)
+	mux.Handle("GET /swagger/", httpSwagger.WrapHandler)
 
 	// ----------------------------------------------------
 	// 2. JWT ROUTES (Membutuhkan Auth JWT) - ADMIN
@@ -43,6 +47,7 @@ func New(cfg *config.Config, database *gorm.DB) *http.ServeMux {
 	mux.Handle("GET /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.GetDevice)))
 	mux.Handle("PATCH /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.UpdateDevice)))
 	mux.Handle("DELETE /api/v1/devices/{id}", jwtAuth(http.HandlerFunc(deviceHandler.DeleteDevice)))
+	mux.Handle("POST /api/v1/devices/{id}/credentials/rotate", jwtAuth(http.HandlerFunc(deviceHandler.RotateCredentials)))
 	mux.Handle("GET /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.ListLocations)))
 	mux.Handle("GET /api/v1/locations/{id}", jwtAuth(http.HandlerFunc(locationHandler.GetLocation)))
 	mux.Handle("POST /api/v1/locations", jwtAuth(http.HandlerFunc(locationHandler.CreateLocation)))

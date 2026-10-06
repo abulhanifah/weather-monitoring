@@ -12,8 +12,9 @@ type Location struct {
 
 // LocationListResponse response paginated untuk GET /api/v1/locations
 type LocationListResponse struct {
-	Data  []Location `json:"data"`
-	Page  int        `json:"page"`
-	Limit int        `json:"limit"`
-	Total int        `json:"total"`
+	Data      []Location `json:"data"`
+	Page      int        `json:"page"`
+	Limit     int        `json:"limit"`
+	Total     int        `json:"total"`
+	TotalPage int        `json:"total_page"`
 }

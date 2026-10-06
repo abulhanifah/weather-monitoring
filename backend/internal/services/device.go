@@ -158,7 +158,7 @@ func (s *DeviceService) CreateDeviceAPIKey(ctx context.Context, deviceID string)
 	rawKey := fmt.Sprintf("%s%s", s.config.PrefixAPIKey, rawRandomHex)
 
 	// simpan masking untuk keperluan frontend
-	masking := fmt.Sprintf("%s...", rawRandomHex[:6])
+	masking := fmt.Sprintf("%s%s", s.config.PrefixAPIKey, rawRandomHex[:6])
 
 	// hash api key untuk disimpan di db untuk validasi
 	hashBytes := sha256.Sum256([]byte(rawKey))
@@ -177,4 +177,27 @@ func (s *DeviceService) CreateDeviceAPIKey(ctx context.Context, deviceID string)
 		return "", nil, err
 	}
 	return rawKey, meta, nil
+}
+
+// RotateDeviceAPIKey revoke semua api key aktif lalu generate yang baru.
+// Raw key hanya dikembalikan 1x ke caller.
+func (s *DeviceService) RotateDeviceAPIKey(ctx context.Context, deviceID string) (*models.GenerateAPIKeyResponse, error) {
+	if deviceID == "" {
+		return nil, errors.New("device id is required")
+	}
+
+	if _, err := s.repo.FindByID(ctx, deviceID); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.RevokeAPIKeysByDeviceID(ctx, deviceID); err != nil {
+		return nil, err
+	}
+
+	raw, meta, err := s.CreateDeviceAPIKey(ctx, deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.GenerateAPIKeyResponse{RawKey: raw, Meta: *meta}, nil
 }

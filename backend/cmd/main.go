@@ -16,6 +16,14 @@ import (
 	"github.com/abulhanifah/weather-monitoring/internal/router"
 )
 
+// @title Weather Monitoring API
+// @version 1.0.0
+// @description API monitoring cuaca (devices, locations, auth JWT).
+// @host localhost:8080
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	withSeed := flag.Bool("with-seed", false, "jalankan seeder sebelum server start")
 	flag.Parse()

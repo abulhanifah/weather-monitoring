@@ -71,6 +71,16 @@ func (r *DeviceRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *DeviceRepository) RevokeAPIKeysByDeviceID(ctx context.Context, deviceID string) error {
+	if err := r.db.WithContext(ctx).Model(&models.APIKeyMeta{}).
+		Where("device_id = ? AND is_revoked = ?", deviceID, false).
+		Update("is_revoked", true).Error; err != nil {
+		slog.ErrorContext(ctx, "Error RevokeAPIKeys", slog.Any("device_id", deviceID), slog.Any("error", err.Error()))
+		return err
+	}
+	return nil
+}
+
 // GetPaginated ambil daftar device dengan filter, page, limit, sort dari params.
 // Keys params: "filter" (map[string]any: status/id exact, name LIKE),
 // "page" (int, default 1), "limit" (int, default 10, max 100),

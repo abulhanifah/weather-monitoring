@@ -1,3 +1,16 @@
+# Checklist API
+- [ ] Ingestion
+- [ ] Device Management
+- [ ] Sensor Management
+- [ ] Dashboard & Readings
+
+# Checklist Frontend
+- [ ] Login
+- [ ] Dashboard
+- [ ] Device Management
+- [ ] Sensor Management
+- [ ] User Management
+
 # Checklist Penyelesaian
 - [ ] Repository Git dengan commit history
 - [ ] README.md (setup, arsitektur, keputusan desain, yang belum selesai)

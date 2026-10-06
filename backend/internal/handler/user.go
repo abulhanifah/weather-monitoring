@@ -21,6 +21,16 @@ func NewUserHandler(cfg *config.Config, svc *services.UserService) *UserHandler 
 	return &UserHandler{cfg: cfg, svc: svc}
 }
 
+// Login godoc
+// @Summary Login dan dapatkan JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param body body models.LoginRequest true "Credentials"
+// @Success 200 {object} models.LoginResponse
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Router /api/v1/login [post]
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

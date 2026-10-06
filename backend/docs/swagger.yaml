@@ -1,0 +1,580 @@
+basePath: /
+definitions:
+  models.APIKeyMeta:
+    properties:
+      created_at:
+        type: string
+      device_id:
+        type: string
+      hash:
+        type: string
+      id:
+        type: integer
+      is_revoked:
+        type: boolean
+      masking:
+        type: string
+    type: object
+  models.CreateDeviceResponse:
+    properties:
+      device:
+        $ref: '#/definitions/models.Device'
+      meta:
+        $ref: '#/definitions/models.APIKeyMeta'
+      raw_key:
+        description: Hanya dikembalikan 1x ke client
+        type: string
+    type: object
+  models.Device:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      location:
+        $ref: '#/definitions/models.Location'
+      location_id:
+        type: integer
+      name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DeviceCreateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.CreateDeviceResponse'
+      message:
+        example: Device created successfully
+        type: string
+    type: object
+  models.DeviceEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Device'
+      message:
+        example: Device updated successfully
+        type: string
+    type: object
+  models.DeviceListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Device'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_page:
+        type: integer
+    type: object
+  models.DevicePatch:
+    properties:
+      description:
+        example: Stasiun pemantau cuaca Bogor
+        type: string
+      location_id:
+        example: 4
+        type: integer
+      name:
+        example: Stasiun Bogor
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  models.ErrorEnvelope:
+    properties:
+      error:
+        example: Device not found
+        type: string
+    type: object
+  models.GenerateAPIKeyResponse:
+    properties:
+      meta:
+        $ref: '#/definitions/models.APIKeyMeta'
+      raw_key:
+        description: Hanya dikembalikan 1x ke client
+        type: string
+    type: object
+  models.HealthEnvelope:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  models.Location:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.LocationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Location'
+      message:
+        example: Location created successfully
+        type: string
+    type: object
+  models.LocationInput:
+    properties:
+      name:
+        example: Bogor
+        type: string
+    type: object
+  models.LocationListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Location'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_page:
+        type: integer
+    type: object
+  models.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  models.LoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  models.MessageEnvelope:
+    properties:
+      message:
+        example: Device deleted successfully
+        type: string
+    type: object
+  models.RotateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GenerateAPIKeyResponse'
+      message:
+        example: Device credentials rotated successfully
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API monitoring cuaca (devices, locations, auth JWT).
+  title: Weather Monitoring API
+  version: 1.0.0
+paths:
+  /api/v1/devices:
+    get:
+      parameters:
+      - default: 1
+        description: Halaman
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: Limit
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: created_at desc
+        description: Kolom devices atau 'location asc|desc'
+        in: query
+        name: sort
+        type: string
+      - description: Filter status
+        enum:
+        - active
+        - offline
+        - degraded
+        - maintenance
+        - faulty
+        - disabled
+        in: query
+        name: status
+        type: string
+      - description: Filter nama (ILIKE)
+        in: query
+        name: name
+        type: string
+      - description: Filter device ID
+        in: query
+        name: id
+        type: string
+      - description: Filter location ID
+        in: query
+        name: location_id
+        type: integer
+      - description: Search ILIKE di device name, location name, device id
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DeviceListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List devices (paginated)
+      tags:
+      - Devices
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device (id, name wajib)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Device'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.DeviceCreateEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Buat device baru
+      tags:
+      - Devices
+  /api/v1/devices/{id}:
+    delete:
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Hapus device
+      tags:
+      - Devices
+    get:
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Device'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Detail device (termasuk location)
+      tags:
+      - Devices
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Field yang diubah
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.DevicePatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DeviceEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Partial update device
+      tags:
+      - Devices
+  /api/v1/devices/{id}/credentials/rotate:
+    post:
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: raw_key hanya ditampilkan 1x
+          schema:
+            $ref: '#/definitions/models.RotateEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Revoke API key lama dan generate yang baru
+      tags:
+      - Devices
+  /api/v1/locations:
+    get:
+      parameters:
+      - default: 1
+        description: Halaman
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: Limit
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: created_at desc
+        description: Sort
+        in: query
+        name: sort
+        type: string
+      - description: Filter nama (ILIKE)
+        in: query
+        name: name
+        type: string
+      - description: Filter location ID
+        in: query
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LocationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List locations (paginated)
+      tags:
+      - Locations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Location
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LocationInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.LocationEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Buat location baru
+      tags:
+      - Locations
+  /api/v1/locations/{id}:
+    get:
+      parameters:
+      - description: Location ID
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Location'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Detail location
+      tags:
+      - Locations
+  /api/v1/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorEnvelope'
+      summary: Login dan dapatkan JWT token
+      tags:
+      - Auth
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HealthEnvelope'
+      summary: Health check
+      tags:
+      - System
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

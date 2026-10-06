@@ -54,6 +54,17 @@ func ToIntParam(v any, fallback int) int {
 	}
 }
 
+// TotalPages hitung jumlah halaman dari total data dan limit per halaman.
+func TotalPages(total, limit int) int {
+	if limit <= 0 {
+		return 0
+	}
+	if total <= 0 {
+		return 0
+	}
+	return (total + limit - 1) / limit
+}
+
 // ToSortParam validasi kolom dan arah sort agar aman dari SQL injection.
 // Kembalikan defaultSort bila input kosong atau kolom tidak diizinkan.
 func ToSortParam(v any, defaultSort string, allowedCols []string) string {

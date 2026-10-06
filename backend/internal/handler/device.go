@@ -20,6 +20,16 @@ func NewHandler(svc *services.DeviceService) *DeviceHandler {
 	return &DeviceHandler{svc: svc}
 }
 
+// GetDevice godoc
+// @Summary Detail device (termasuk location)
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Success 200 {object} models.Device
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id} [get]
 func (h *DeviceHandler) GetDevice(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := r.PathValue("id")
@@ -35,6 +45,18 @@ func (h *DeviceHandler) GetDevice(w http.ResponseWriter, r *http.Request) {
 	pkg.WriteJSON(w, http.StatusOK, dev)
 }
 
+// CreateDevice godoc
+// @Summary Buat device baru
+// @Tags Devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body models.Device true "Device (id, name wajib)"
+// @Success 201 {object} models.DeviceCreateEnvelope
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/devices [post]
 func (h *DeviceHandler) CreateDevice(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -63,6 +85,19 @@ func (h *DeviceHandler) CreateDevice(w http.ResponseWriter, r *http.Request) {
 
 // UpdateDevice handler untuk PATCH /api/v1/devices/{id}.
 // Body: subset dari {name, description, status, location_id}.
+// UpdateDevice godoc
+// @Summary Partial update device
+// @Tags Devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Param body body models.DevicePatch true "Field yang diubah"
+// @Success 200 {object} models.DeviceEnvelope
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id} [patch]
 func (h *DeviceHandler) UpdateDevice(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := r.PathValue("id")
@@ -96,6 +131,17 @@ func (h *DeviceHandler) UpdateDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteDevice handler untuk DELETE /api/v1/devices/{id}.
+// DeleteDevice godoc
+// @Summary Hapus device
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Success 200 {object} models.MessageEnvelope
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id} [delete]
 func (h *DeviceHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
@@ -117,11 +163,71 @@ func (h *DeviceHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// RotateCredentials handler untuk POST /api/v1/devices/{id}/credentials/rotate.
+// Me-revoke api key lama lalu mengembalikan raw key baru (hanya 1x).
+// RotateCredentials godoc
+// @Summary Revoke API key lama dan generate yang baru
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Device ID"
+// @Success 200 {object} models.RotateEnvelope "raw_key hanya ditampilkan 1x"
+// @Failure 400 {object} models.ErrorEnvelope
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 404 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/devices/{id}/credentials/rotate [post]
+func (h *DeviceHandler) RotateCredentials(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	res, err := h.svc.RotateDeviceAPIKey(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkg.WriteJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error": "Device not found",
+			})
+			return
+		}
+		if err.Error() == "device id is required" {
+			pkg.WriteJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+			return
+		}
+		pkg.WriteJSON(w, http.StatusInternalServerError, map[string]interface{}{
+			"error": "Failed to rotate device credentials",
+		})
+		return
+	}
+
+	pkg.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Device credentials rotated successfully",
+		"data":    res,
+	})
+}
+
 // ListDevices handler untuk GET /api/v1/devices.
 // Query params: page (default 1), limit (default 10),
 // sort (kolom devices, atau "location asc|desc" untuk sort nama lokasi),
 // filter: status, name, id, location_id,
 // q (search ILIKE di device name, location name, device id).
+// ListDevices godoc
+// @Summary List devices (paginated)
+// @Tags Devices
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Halaman" default(1) minimum(1)
+// @Param limit query int false "Limit" default(10) minimum(1) maximum(100)
+// @Param sort query string false "Kolom devices atau 'location asc|desc'" default(created_at desc)
+// @Param status query string false "Filter status" Enums(active, offline, degraded, maintenance, faulty, disabled)
+// @Param name query string false "Filter nama (ILIKE)"
+// @Param id query string false "Filter device ID"
+// @Param location_id query int false "Filter location ID"
+// @Param q query string false "Search ILIKE di device name, location name, device id"
+// @Success 200 {object} models.DeviceListResponse
+// @Failure 401 {object} models.ErrorEnvelope
+// @Failure 500 {object} models.ErrorEnvelope
+// @Router /api/v1/devices [get]
 func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
@@ -177,9 +283,10 @@ func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pkg.WriteJSON(w, http.StatusOK, models.DeviceListResponse{
-		Data:  devices,
-		Page:  page,
-		Limit: limit,
-		Total: total,
+		Data:      devices,
+		Page:      page,
+		Limit:     limit,
+		Total:     total,
+		TotalPage: pkg.TotalPages(total, limit),
 	})
 }

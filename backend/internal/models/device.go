@@ -38,8 +38,9 @@ type GenerateAPIKeyResponse struct {
 
 // DeviceListResponse response paginated untuk GET /api/v1/devices
 type DeviceListResponse struct {
-	Data  []Device `json:"data"`
-	Page  int      `json:"page"`
-	Limit int      `json:"limit"`
-	Total int      `json:"total"`
+	Data      []Device `json:"data"`
+	Page      int      `json:"page"`
+	Limit     int      `json:"limit"`
+	Total     int      `json:"total"`
+	TotalPage int      `json:"total_page"`
 }
